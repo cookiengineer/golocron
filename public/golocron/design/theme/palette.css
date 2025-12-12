@@ -1,0 +1,55 @@
+
+body {
+
+	--header-color: #ffffff;
+	--header-background: #101010;
+
+	--aside-color: #ffffff;
+	--aside-background: #101010;
+
+	--main-color: #ffffff;
+	--main-background: #202020;
+
+	--link-default-color: #ff1a1a;
+	--link-default-background: transparent;
+	--link-active-color: #ffffff;
+	--link-active-background: transparent;
+
+	--article-color: #ffffff;
+	--article-background: #1a1a1a;
+
+	--article-del-color: #cc0000;
+	--article-code-color: #ffffff;
+	--article-code-background: #0a0a0a;
+
+	--footer-color: #ffffff;
+	--footer-background: #101010;
+
+	--button-default-color: #ff1a1a;
+	--button-default-background: #202020;
+	--button-default-border: #550000;
+
+	--button-focus-color: #ffffff;
+	--button-focus-background: #662020;
+
+	--button-disabled-color: #555555;
+	--button-disabled-background: #101010;
+
+	--input-default-color: #ffffff;
+	--input-default-background: #202020;
+	--input-default-border: #550000;
+
+	--input-focus-color: #ffffff;
+	--input-focus-background: #662020;
+	--input-focus-border: #cc0000;
+
+	--input-invalid-color: #ff4d4d;
+	--input-invalid-background: #441111;
+
+	--input-active-background: #660000;
+
+	--input-disabled-color: #555555;
+	--input-disabled-background: #101010;
+
+}
+

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>{{.Meta.Title}}</title>
+
+		<!-- Meta -->
+		<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=0.5, maximum-scale=2, user-scalable=yes">
+		<meta name="mobile-web-app-capable" content="yes">
+		<meta name="mobile-web-app-status-bar-style" content="black-translucent">
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="creator" content="{{.Meta.Author}}">
+		<meta name="description" content="{{.Meta.Title}}">
+		<meta name="keywords" content="{{RenderStrings .Meta.Tags ", "}}">
+		<meta name="generator" content="{{.Meta.Author}}'s bare hands with the ultimate power of the Golocron">
+		<meta name="robots" content="index, follow">
+
+		<!-- Social Media -->
+		<meta property="og:title" content="{{.Meta.Title}}">
+		<meta property="og:site_name" content="{{RenderDomain .URL}}">
+		<meta property="og:description" content="{{.Meta.Summary}}">
+		<meta property="og:image" itemprop="image" content="{{RenderURL .URL .Meta.Image}}">
+		<meta property="og:url" content="{{RenderURL .URL ""}}">
+		<meta property="og:type" content="article">
+
+		<!-- Shitter -->
+		<meta name="twitter:card" content="summary">
+		<meta name="twitter:domain" content="{{RenderDomain .URL}}">
+		<meta name="twitter:title" itemprop="name" content="{{.Meta.Title}}">
+		<meta name="twitter:description" itemprop="description" content="{{.Meta.Summary}}">
+		<meta name="twitter:image" itemprop="image" content="{{RenderURL .URL .Meta.Image}}">
+
+		<!-- Website Design -->
+		<link rel="stylesheet" href="/golocron/article/index.css">
+		<link rel="stylesheet" href="/golocron/article/highlight.css">
+		<script type="module" src="/golocron/article/index.mjs" defer></script>
+	</head>
+	<body data-layout="article">
+		<main>
+			<article>
+{{ .Render "\t\t\t" }}
+			</article>
+		</main>
+	</body>
+</html>

@@ -1,0 +1,168 @@
+
+:root {
+	--max-characters: 100ch;
+}
+
+body[data-layout="editor"] > div > aside > div > pre,
+body[data-layout="editor"] > div > aside > div > textarea {
+	display: block;
+	position: absolute;
+	margin: 0px;
+	padding: 0px;
+	top: 0px;
+	right: 0px;
+	bottom: 0px;
+	left: 0px;
+	white-space: nowrap;
+	font-size: 16px;
+	font-family: "vera-mono";
+	font-weight: normal;
+	line-height: 20px;
+	letter-spacing: normal;
+	text-align: left;
+	vertical-align: middle;
+	box-sizing: border-box;
+	tab-size: 4;
+}
+
+body[data-layout="editor"] > div > aside > div > pre {
+	background: transparent;
+	counter-reset: line;
+	pointer-events: none;
+	overflow: hidden;
+	z-index: 1;
+}
+
+body[data-layout="editor"] > div > aside > div > pre > span {
+	display: block;
+}
+
+body[data-layout="editor"] > div > aside > div > pre > span::before {
+	display: inline-block;
+	counter-increment: line;
+	content: counter(line);
+	width: 32px;
+	margin: 0px 8px 0px 0px;
+	padding: 0px 2px;
+	color: var(--aside-color);
+	background: var(--aside-background);
+	text-align: right;
+}
+
+body[data-layout="editor"] > div > aside > div > pre > span::after {
+	content: "¶";
+	color: rgba(255,255,255,0.5);
+	margin: 0px;
+	padding: 0px 0px 0px 2px;
+}
+
+body[data-layout="editor"] > div > aside > div > textarea {
+	padding: 0px 0px 0px calc(32px + 8px + 4px);
+	border: none;
+	outline: none;
+	resize: none;
+	color: transparent;
+	background: transparent;
+	caret-color: var(--input-default-color);
+	z-index: 2;
+}
+
+body[data-layout="editor"] > div > aside > div > textarea:hover,
+body[data-layout="editor"] > div > aside > div > textarea:focus {
+	color: transparent;
+	background: transparent;
+	border: 0px solid transparent;
+	outline: none;
+}
+
+/*
+body[data-layout="editor"] > div > aside > div > pre::after {
+	display: block;
+	position: fixed;
+	content: "";
+	top: 0px;
+	right: auto;
+	bottom: 0px;
+	left: calc(var(--max-characters));
+	width: 4px;
+	background-image: repeating-linear-gradient(
+		to bottom,
+		rgb(255,255,255) 0px,
+		rgb(255,255,255) 4px,
+		transparent 4px,
+		transparent 8px
+	);
+	background-position: calc(var(--max-characters)) 0px;
+    pointer-events: none;
+    opacity: 0.5;
+}
+*/
+
+/*
+@media(max-width: 1560px) {
+
+	body[data-layout="editor"] > header {
+		display: block flow-root;
+		flex-direction: unset;
+		align-items: unset;
+		justify-content: unset;
+		min-width: 700px;
+		height: 100px;
+	}
+
+	body[data-layout="editor"] > header > div:first-of-type {
+		display: block;
+		width: auto;
+		height: 50px;
+		position: absolute;
+		top: 50px;
+		right: 16px;
+		bottom: auto;
+		left: 16px;
+	}
+
+	body[data-layout="editor"] > header > div:last-of-type {
+		display: block;
+		width: auto;
+		height: 50px;
+		position: absolute;
+		top: 0px;
+		right: 16px;
+		bottom: auto;
+		left: 16px;
+	}
+
+	body[data-layout="editor"] > header > div:last-of-type label {
+		text-align: left;
+	}
+
+	body[data-layout="editor"] > div {
+		display: block flow-root;
+		position: fixed;
+		width: auto;
+		height: auto;
+		top: 100px;
+		right: 0px;
+		bottom: 0px;
+		left: 0px;
+	}
+
+	body[data-layout="editor"] > div > aside {
+		display: block flow-root;
+		position: absolute;
+		width: auto;
+		height: auto;
+		max-width: unset;
+		top: 0px;
+		right: 0px;
+		bottom: 0px;
+		left: 0px;
+		flex: unset;
+	}
+
+	body[data-layout="editor"] > div > main {
+		display: none;
+	}
+
+}
+*/

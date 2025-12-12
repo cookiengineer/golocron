@@ -1,0 +1,22 @@
+
+dialog#editor-open label {
+	display: block;
+	width: calc(100% - 32px);
+	margin: 16px;
+	font-family: 'crumble';
+	font-weight: normal;
+	font-size: 16px;
+}
+
+dialog#editor-open input[type="text"] {
+	display: block;
+	width: calc(100% - 32px);
+	margin: 16px;
+}
+
+dialog#editor-open select {
+	display: block;
+	width: calc(100% - 32px);
+	margin: 16px;
+}
+

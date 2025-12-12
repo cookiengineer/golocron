@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Cookie Engineer's Golocron Editor</title>
+
+		<!-- Meta -->
+		<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=0.5, maximum-scale=2, user-scalable=yes">
+		<meta name="mobile-web-app-capable" content="yes">
+		<meta name="mobile-web-app-status-bar-style" content="black-translucent">
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+		<!-- Editor Design -->
+		<link rel="stylesheet" href="./design/index.css">
+		<script type="module" src="./design/index.mjs" defer></script>
+	</head>
+	<body data-layout="editor">
+		<header>
+			<div>
+				<button title="format current selection as headline" data-format="h1" disabled>
+					<svg viewBox="0 0 18 18" width="18" height="18">
+						<path fill="currentColor" d="M9 3a1 1 0 0 0-1 1v4H3V4a1 1 0 0 0-2 0v10a1 1 0 0 0 2 0v-4h5v4a1 1 0 0 0 2 0V4a1 1 0 0 0-1-1Z"/>
+						<text fill="currentColor" x="12" y="16" font-size="12" font-family="sans-serif" font-weight="700">1</text>
+					</svg>
+				</button>
+				<button title="format current selection as secondary headline" data-format="h2">
+					<svg viewBox="0 0 18 18" width="18" height="18">
+						<path fill="currentColor" d="M9 3a1 1 0 0 0-1 1v4H3V4a1 1 0 0 0-2 0v10a1 1 0 0 0 2 0v-4h5v4a1 1 0 0 0 2 0V4a1 1 0 0 0-1-1Z"/>
+						<text fill="currentColor" x="12" y="16" font-size="12" font-family="sans-serif" font-weight="700">2</text>
+					</svg>
+				</button>
+				<button title="format current selection as third headline" data-format="h3">
+					<svg viewBox="0 0 18 18" width="18" height="18">
+						<path fill="currentColor" d="M9 3a1 1 0 0 0-1 1v4H3V4a1 1 0 0 0-2 0v10a1 1 0 0 0 2 0v-4h5v4a1 1 0 0 0 2 0V4a1 1 0 0 0-1-1Z"/>
+						<text fill="currentColor" x="12" y="16" font-size="12" font-family="sans-serif" font-weight="700">3</text>
+					</svg>
+				</button>
+				<button title="format current selection as third headline" data-format="h4">
+					<svg viewBox="0 0 18 18" width="18" height="18">
+						<path fill="currentColor" d="M9 3a1 1 0 0 0-1 1v4H3V4a1 1 0 0 0-2 0v10a1 1 0 0 0 2 0v-4h5v4a1 1 0 0 0 2 0V4a1 1 0 0 0-1-1Z"/>
+						<text fill="currentColor" x="12" y="16" font-size="12" font-family="sans-serif" font-weight="700">4</text>
+					</svg>
+				</button>
+				<span>|</span>
+				<button title="format current selection as bold" data-format="b">
+					<svg viewBox="0 0 18 18" width="18" height="18">
+					  <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 4h4.5A2.5 2.5 0 0 1 12 6.5v0A2.5 2.5 0 0 1 9.5 9H5h0V4h0ZM5 9h5.5a2.5 2.5 0 0 1 2.5 2.5v0a2.5 2.5 0 0 1-2.5 2.5H5h0V9h0Z"/>
+					</svg>
+				</button>
+				<button title="format current selection as italic" data-format="i">
+					<svg viewBox="0 0 18 18" width="18" height="18">
+					  <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4h6M5 14h6M8 14l2-10"/>
+					</svg>
+				</button>
+				<button title="format current selection as striked through" data-format="del">
+					<svg viewBox="0 0 18 18" width="18" height="18">
+						<path stroke="currentColor" d="m15.5 8.5-13 1"/>
+						<path fill="currentColor" d="M9 8c-2.46-.2-3-.48-3-1.5C6 5.8 7.28 5 9 5c1.57 0 2.77.68 2.97 1.3a1 1 0 0 0 1.9-.6C13.36 4.1 11.35 3 9 3 6.2 3 4 4.54 4 6.5a3.2 3.2 0 0 0 .5 1.84ZM8.98 10c2.48.2 3.02.48 3.02 1.5 0 .7-1.28 1.5-3 1.5-1.57 0-2.77-.68-2.97-1.3a1 1 0 1 0-1.9.6C4.64 13.9 6.65 15 9 15c2.8 0 5-1.54 5-3.5a3.2 3.2 0 0 0-.5-1.84Z"/>
+					</svg>
+				</button>
+				<button title="format current selection as a quote" data-format="q">
+					<svg viewBox="2 2 20 20" width="18" height="18">
+					  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 10.82H9c-.2 0-.4-.06-.56-.16a.93.93 0 0 1-.36-.4.83.83 0 0 1-.06-.53.89.89 0 0 1 .27-.46c.14-.13.32-.22.51-.25.2-.04.4-.02.58.05.19.07.34.18.45.33.11.15.17.33.17.5v2.28c0 .48-.21.95-.59 1.29A2.1 2.1 0 0 1 8 14M16 10.82h-1c-.2 0-.4-.06-.56-.16a.93.93 0 0 1-.36-.4.83.83 0 0 1-.06-.53.89.89 0 0 1 .27-.46c.14-.13.32-.22.51-.25.2-.04.4-.02.58.05.19.07.34.18.45.33.11.15.17.33.17.5v2.28c0 .48-.21.95-.59 1.29A2.1 2.1 0 0 1 14 14"/>
+					</svg>
+				</button>
+				<button title="format current selection as code" data-format="pre">
+					<svg viewBox="0 0 18 18" width="18" height="18">
+					  <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 7 3 9l2 2M13 7l2 2-2 2M10 5l-2 8"/>
+					</svg>
+				</button>
+				<button title="format current selection as web link" data-format="a">
+					<svg viewBox="0 0 18 18" width="18" height="18">
+					  <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m7 7 4 4M8.9 4.58a3.48 3.48 0 0 1 .36 4.68 3.48 3.48 0 0 1-4.68-.36c-1.4-1.4-2.54-2.5-.36-4.68s3.28-1.03 4.68.36Z"/>
+					  <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.42 9.1a3.48 3.48 0 0 0-4.68-.36 3.48 3.48 0 0 0 .36 4.68c1.4 1.4 2.5 2.54 4.68.36s1.04-3.28-.36-4.68Z"/>
+					</svg>
+				</button>
+				<button title="format current selection as web image" data-format="img">
+					<svg viewBox="0 0 18 18" width="18" height="18">
+						<path fill="none" stroke="currentColor" stroke-width="2" d="M0 0h18v18H0z"/>
+						<circle fill="currentColor" stroke="none" cx="6" cy="6" r="2"/>
+						<path fill="currentColor" stroke="none" d="M5 12v-1l2-2 1 1 3-3 2 2v3H5"/>
+					</svg>
+				</button>
+				<span>|</span>
+				<button title="format current selection as unordered list" data-format="ul">
+					<svg viewBox="0 0 18 18" width="18" height="18">
+					  <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 4h9M6 9h9M6 14h9M3 4h0M3 9h0M3 14h0"/>
+					</svg>
+				</button>
+				<button title="format current selection as ordered list" data-format="ol">
+					<svg viewBox="0 0 18 18" width="18" height="18">
+					  <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4h8M7 9h8M7 14h8"/>
+					  <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M2.5 5.5h2"/>
+					  <path fill="currentColor" d="M3.5 6a.5.5 0 0 1-.5-.5V3.08l-.28.14A.5.5 0 0 1 2.05 3c-.12-.25-.02-.32.23-.45l1-.5A.5.5 0 0 1 4 2.5v3a.5.5 0 0 1-.5.5Z"/>
+					  <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5h-2c0-.23 1.85-1.08 1.85-2.23a.96.96 0 0 0-1.85-.11M2.5 14.85a.96.96 0 0 0 1.85-.11.7.7 0 0 0-.6-.74.69.69 0 0 0 .6-.74.96.96 0 0 0-1.85-.1"/>
+					</svg>
+				</button>
+				<button title="format current selection as task list" data-format="dl">
+					<svg viewBox="0 0 18 18" width="18" height="18">
+					  <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 4h8M8 9h8M8 14h8"/>
+					  <rect width="3" height="3" x="2" y="3" fill="none" stroke="currentColor" stroke-width="1.5" rx=".5"/>
+					  <rect width="3" height="3" x="2" y="13" fill="none" stroke="currentColor" stroke-width="1.5" rx=".5"/>
+					  <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m2.65 9.5.85 1 1.5-2"/>
+					</svg>
+				</button>
+			</div>
+			<div>
+				<label>/weblog/articles/draft-YYYY-MM-DD.md</label>
+				<button title="open markdown file" data-action="open">Open</button>
+				<button title="save markdown file" data-action="save" disabled>Save</button>
+			</div>
+		</header>
+		<div>
+			<aside>
+				<div>
+					<pre class="markdown"></pre>
+					<textarea wrap="off"></textarea>
+				</div>
+			</aside>
+			<main>
+				<iframe src="about:blank"></iframe>
+			</main>
+		</div>
+		<dialog id="editor-open">
+			<article>
+				<h3>Open Article</h3>
+				<div>
+					<label for="editor-create-file">Create a new Article:</label>
+					<input id="editor-create-file" name="create-file" type="text" placeholder="/weblog/articles/foo-bar-qux.md">
+				</div>
+				<div>
+					<label for="editor-open-file">Open existing Article:</label>
+					<select id="editor-open-file" name="open-file"></select>
+				</div>
+				<footer>
+					<div><button data-action="cancel">Cancel</button></div>
+					<div></div>
+					<div><button data-action="confirm">Open</button></div>
+				</footer>
+			</article>
+		</dialog>
+	</body>
+</html>

@@ -1,0 +1,35 @@
+
+body > div {
+	display: flex;
+	height: calc(100vh - 50px);
+	flex-wrap: nowrap;
+	gap: 8px;
+	background: var(--header-background);
+	top: 50px;
+	right: 0px;
+	bottom: 0px;
+	left: 0px;
+}
+
+body > div > aside {
+	position: relative;
+	flex: 1 1 50%;
+	max-width: calc(50% - 4px);
+	height: 100%;
+	margin: 0px;
+	padding: 0px;
+	color: var(--aside-color);
+	background: var(--aside-background);
+	text-align: center;
+	box-sizing: border-box;
+	z-index: 19;
+}
+
+body > div > aside > div {
+	position: absolute;
+	inset: 0;
+	overflow: auto;
+	color: var(--article-code-color);
+	background: var(--article-code-background);
+}
+

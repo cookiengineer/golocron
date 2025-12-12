@@ -1,0 +1,72 @@
+
+header {
+	display: block flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	width: auto;
+	height: 50px;
+	margin: 0px;
+	padding: 9px 16px;
+	color: var(--header-color);
+	background: var(--header-background);
+	text-align: center;
+	box-sizing: border-box;
+}
+
+header div {
+	display: inline-block;
+	width: auto;
+	margin: 0px auto 0px auto;
+	padding: 0px;
+	line-height: 50px;
+	font-family: 'vera-mono';
+	font-weight: normal;
+	font-style: normal;
+	font-size: 16px;
+	text-align: left;
+	vertical-align: middle;
+	box-sizing: border-box;
+}
+
+header div:first-of-type {
+	width: 50%;
+	line-height: 50px;
+	text-align: center;
+	white-space: nowrap;
+}
+
+header div:last-of-type {
+	width: 50%;
+	line-height: 50px;
+	text-align: right;
+	white-space: nowrap;
+}
+
+header div:last-of-type label {
+	display: inline-block;
+	width: calc(100% - 160px);
+	text-align: center;
+	vertical-align: middle;
+}
+
+header div:last-of-type label a {
+	color: var(--header-color);
+	text-decoration: none;
+}
+
+header div:last-of-type button {
+	width: 70px;
+}
+
+header div button {
+	width: auto;
+	line-height: 16px;
+	height: 32px;
+	vertical-align: middle;
+}
+
+header div button svg {
+	vertical-align: middle;
+}
+

@@ -1,0 +1,119 @@
+
+dialog:not([open]) {
+	display: block;
+}
+
+dialog {
+	display: block flow-root;
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	top: 0px;
+	right: 0px;
+	bottom: 0px;
+	left: 0px;
+	margin: 0px;
+	padding: 0px;
+	background: rgba(0,0,0,0.0);
+	transition: all 250ms ease-out;
+	pointer-events: none;
+	appearance: none;
+	box-sizing: border-box;
+	z-index: 100;
+	opacity: 0;
+}
+
+dialog[open] {
+	background: rgba(0,0,0,0.5);
+	transition: all 250ms ease-out;
+	pointer-events: all;
+	opacity: 1;
+}
+
+dialog article {
+	display: block;
+	position: fixed;
+	width: 640px;
+	height: auto;
+	top: 50%;
+	right: auto;
+	bottom: auto;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	transition: all 250ms ease-out;
+	color: var(--article-color);
+	background: var(--article-background);
+	border: 1px solid transparent;
+	border-radius: 8px;
+	z-index: 31;
+}
+
+dialog article > h3 {
+	display: block;
+	line-height: 50px;
+	height: 50px;
+	position: static;
+	margin: 0px;
+	padding: 0px;
+	font-family: 'cantarell';
+	font-weight: bold;
+	font-size: 20px;
+	text-align: center;
+	vertical-align: middle;
+	color: var(--header-color);
+	background: var(--header-background);
+	border-radius: 8px 8px 0px 0px;
+	user-select: none;
+}
+
+dialog article > div {
+	display: block;
+	margin: 0px 0px 32px 0px;
+}
+
+dialog article > footer {
+	display: block flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	width: auto;
+	height: 50px;
+	margin: 0px;
+	padding: 9px 16px;
+	color: var(--header-color);
+	background: var(--header-background);
+	text-align: center;
+	box-sizing: border-box;
+	height: 50px;
+}
+
+dialog article > footer div {
+	display: inline-block;
+	width: auto;
+	margin: 0px auto 0px auto;
+	padding: 0px;
+	width: 50%;
+	line-height: 50px;
+	font-family: 'vera-mono';
+	font-weight: normal;
+	font-style: normal;
+	font-size: 16px;
+	text-align: left;
+	vertical-align: middle;
+	box-sizing: border-box;
+}
+
+dialog article > footer div:first-of-type {
+	width: 50%;
+	line-height: 50px;
+	text-align: left;
+	white-space: nowrap;
+}
+
+dialog article > footer div:last-of-type {
+	width: 50%;
+	line-height: 50px;
+	text-align: right;
+	white-space: nowrap;
+}
+
