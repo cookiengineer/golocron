@@ -14,7 +14,7 @@ func main() {
 	cwd, _ := os.Getwd()
 
 	// Base URL is http://localhost:3000
-	// Live-Preview enabled
+	// Live-Preview disabled
 	config := golocron_config.NewConfig("http://localhost:3000", false, map[string]string{
 		"/weblog": cwd + "/public/weblog",
 		"/wiki":   cwd + "/public/wiki",
