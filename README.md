@@ -14,6 +14,8 @@ Plug and Play Blogging and Wiki System for Go Backends.
 - Pluggable UI to integrate into existing Go Backends
 - Stores documents on the Filesystem
 
+![Screenshot](./assets/screenshot.jpg)
+
 ### Usage
 
 The Editor UI can be integrated into existing backends, by using the predefined [handlers](./handlers).
@@ -21,16 +23,15 @@ Integration of filesystem root folders are done on a per-path-prefix basis. All 
 assets are integrated with an `embed.FS` instance so that you don't have to worry about mapping those
 paths, they're served automatically at `/golocron/*`.
 
-Default routes:
+**Golocron HTTP Routes**:
 
 - `/golocron/index.html` serves the Editor UI
 - `/golocron/api/config` serves the config and document index
 - `/golocron/api/open` opens markdown document
 - `/golocron/api/save` saves markdown document
+- `/golocron/api/render` renders markdown document (fallback if live-preview is disabled)
 
-Routes used when live-preview is disabled:
-
-- `/golocron/api/render` renders markdown document
+### Integration
 
 The integration is made quite simple. Take a look at the [examples/mysithblog](./examples/mysithblog)
 to learn how to use the `golocron.Activate(*config.Config, *http.ServeMux)` API.
@@ -80,7 +81,6 @@ method, and to use the `document.Render()` method to generate an indented HTML s
 Golocron also offers an integration with this, take a look at the [templates](./templates)
 folder which shows the default `text/template` instance that is used by the `/golocron/api/render`
 route.
-
 
 ### License
 

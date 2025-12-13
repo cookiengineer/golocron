@@ -329,8 +329,10 @@ Editor.prototype = {
 				let path_md   = this.file.url.pathname;
 				let path_html = path_md.substr(0, path_md.length - 3) + ".html";
 
-				if (this.iframe !== null) {
+				if (this.__config.live_preview === true) {
 					this.iframe.setAttribute("src", path_html);
+				} else {
+					this.iframe.setAttribute("src", "/golocron/api/render?file=" + this.file.url.pathname);
 				}
 
 				let save_button = this.header.querySelector("button[data-action=\"save\"]");

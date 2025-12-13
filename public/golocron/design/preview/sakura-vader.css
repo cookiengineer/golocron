@@ -1,0 +1,14 @@
+
+body[data-theme="sakura-vader"] {
+	--color-blossom: #f06c7d;
+	--color-fade: #da4453;
+
+	--color-bg: #120c0e;
+	--color-bg-alt: #40363a;
+
+	--color-text: #d9d8dc;
+	--font-size-base: 1.8rem;
+
+	--font-family-base: -apple-system, "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans", sans-serif;
+	--font-family-heading: var(--font-family-base);
+}
