@@ -112,7 +112,11 @@ func (document *Document) ParseMeta(value string) {
 				key := strings.TrimSpace(line[2:strings.Index(line, ":")])
 				val := strings.TrimSpace(line[strings.Index(line, ":")+1:])
 
-				if key == "title" {
+				if key == "author" {
+
+					document.SetAuthor(val)
+
+				} else if key == "title" {
 
 					document.SetTitle(val)
 
@@ -506,6 +510,10 @@ func (document *Document) ParseBody(value string) {
 
 	}
 
+}
+
+func (document *Document) SetAuthor(value string) {
+	document.Meta.Author = strings.TrimSpace(value)
 }
 
 func (document *Document) SetDate(value time.Time) bool {

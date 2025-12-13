@@ -1,4 +1,5 @@
 ===
+- author: Darth Sidious
 - title: Hello Golocron
 - summary: A short summary
 - date: 2025-12-31
