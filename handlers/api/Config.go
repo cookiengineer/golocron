@@ -5,6 +5,7 @@ import "github.com/cookiengineer/golocron/handlers"
 import "github.com/cookiengineer/golocron/parsers/markdown"
 import "encoding/json"
 import "net/http"
+import "net/url"
 import io_fs "io/fs"
 import "os"
 import "strconv"
@@ -46,12 +47,25 @@ func Config(config *config.Config, request *http.Request, response http.Response
 
 						if err1 == nil {
 
-							document := markdown.Parse(base_url, path + "/" + filename, bytes)
+							path_url, err2 := url.Parse(path)
 
-							if document != nil && document.IsValid() {
-								handshake.Documents[document.URL.Path] = document.Meta.Date.Format("2006-01-02")
-							} else {
-								handshake.Documents[document.URL.Path] = "0000-00-00"
+							if err2 == nil {
+
+								document_url := base_url.ResolveReference(path_url)
+								document, err3 := markdown.Parse(document_url.String(), bytes)
+
+								if err3 == nil {
+
+									if document.IsValid() {
+										handshake.Documents[document.URL.Path] = document.Meta.Date.Format("2006-01-02")
+									} else {
+										handshake.Documents[document.URL.Path] = "0000-00-00"
+									}
+
+								} else {
+									handshake.Documents[document.URL.Path] = "0000-00-00"
+								}
+
 							}
 
 						}

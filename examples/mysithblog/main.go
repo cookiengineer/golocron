@@ -4,7 +4,9 @@ import "github.com/cookiengineer/golocron"
 import golocron_config "github.com/cookiengineer/golocron/config"
 import golocron_handlers "github.com/cookiengineer/golocron/handlers"
 import "github.com/cookiengineer/golocron/parsers/markdown"
+import "log"
 import "net/http"
+import "net/url"
 import "os"
 import "strings"
 import "fmt"
@@ -70,9 +72,16 @@ func main() {
 
 					if err == nil {
 
-						document := markdown.Parse(config.BaseURL(), http_path, buffer)
+						path_url, err2 := url.Parse(http_path)
 
-						html := fmt.Sprintf(`<!DOCTYPE html>
+						if err2 == nil {
+
+							document_url := config.BaseURL().ResolveReference(path_url)
+							document, err3 := markdown.Parse(document_url.String(), buffer)
+
+							if err3 == nil {
+
+								html := fmt.Sprintf(`<!DOCTYPE html>
 <html>
 	<head>
 		<title>%s</title>
@@ -85,7 +94,15 @@ func main() {
 </html>
 `, document.Meta.Title, document.Render("\t\t\t"))
 
-						golocron_handlers.ServeFile(config, request, response, []byte(html))
+								golocron_handlers.ServeFile(config, request, response, []byte(html))
+
+							} else {
+								golocron_handlers.InternalServerError(config, request, response)
+							}
+
+						} else {
+							golocron_handlers.InternalServerError(config, request, response)
+						}
 
 					} else {
 						golocron_handlers.NotFound(config, request, response)
@@ -108,6 +125,7 @@ func main() {
 	// Dispatch golocron to /golocron/ and /golocron/api
 	golocron.Activate(config, mux)
 
+	log.Println("Listening on http://localhost:3000")
 	http.ListenAndServe(":3000", mux)
 
 }

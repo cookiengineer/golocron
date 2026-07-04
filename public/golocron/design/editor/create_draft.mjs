@@ -5,12 +5,14 @@ export const create_draft = (url, title) => {
 
 	if (url.pathname.startsWith("/projects/")) {
 
+		let author = "The Dark Lord";
 		let folder = url.pathname.substr(0, url.pathname.length - 3);
 		let name   = folder.split("/").pop();
 		let image  = folder + "/screenshot-01.png";
 
 		return [
 			"===",
+			"- author: " + author,
 			"- title: " + title,
 			"- summary: A short summary",
 			"- date: " + datetime(),
@@ -37,11 +39,13 @@ export const create_draft = (url, title) => {
 
 	} else {
 
+		let author = "The Dark Lord";
 		let folder = url.pathname.substr(0, url.pathname.length - 3);
 		let image  = folder + "/teaser.jpg";
 
 		return [
 			"===",
+			"- author: " + author,
 			"- title: " + title,
 			"- summary: A short summary",
 			"- date: " + datetime(),
