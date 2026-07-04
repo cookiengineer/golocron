@@ -1,7 +1,9 @@
 package markdown
 
+import "fmt"
 import net_url "net/url"
 import "regexp"
+import "sort"
 import "strings"
 import "time"
 
@@ -16,11 +18,41 @@ type Document struct {
 		Image   string    `json:"image"`
 	} `json:"meta"`
 	Abbreviations map[string]string
-	Statistics struct {
+	Statistics    struct {
 		Minutes int `json:"minutes"`
 		Words   int `json:"words"`
 	} `json:"statistics"`
 	Body []*Element `json:"body"`
+}
+
+func NewDocument(file string) *Document {
+
+	base := strings.TrimSpace(file)
+
+	if base == "" {
+		base = "https://cookie.engineer/index.html"
+	} else if strings.HasPrefix(base, "/") {
+		base = "https://cookie.engineer/" + base[1:]
+	}
+
+	base_url, err := net_url.Parse(base)
+
+	if err == nil {
+
+		var document Document
+
+		document.URL = base_url
+		document.Abbreviations = make(map[string]string)
+		document.Meta.Tags = make([]string, 0)
+		document.Body = make([]*Element, 0)
+		document.Meta.Image = "https://cookie.engineer/design/about/cookiengineer.jpg"
+
+		return &document
+
+	}
+
+	return nil
+
 }
 
 func (document *Document) AddElement(element *Element) {
@@ -56,7 +88,12 @@ func (document *Document) CloseElement() bool {
 	if element != nil {
 
 		if element.Type != "#text" {
-			document.Body = append(document.Body, NewElement("#text"))
+
+			text := NewElement("#text")
+			text.SetLine(element.Line + 1)
+
+			document.Body = append(document.Body, text)
+
 		}
 
 	}
@@ -83,7 +120,7 @@ func (document *Document) IsValid() bool {
 
 	if document.URL != nil && len(document.Body) > 0 {
 
-		if document.Meta.Title != "" && document.Meta.Summary != "" {
+		if document.Meta.Author != "" && document.Meta.Title != "" && document.Meta.Summary != "" {
 
 			if document.Meta.Date.IsZero() == false && len(document.Meta.Tags) > 0 {
 				result = true
@@ -97,9 +134,51 @@ func (document *Document) IsValid() bool {
 
 }
 
-func (document *Document) ParseMeta(value string) {
+func (document *Document) MarshalText() ([]byte, error) {
 
+	return []byte(document.String()), nil
+
+}
+
+func (document *Document) Parse(bytes []byte) []error {
+
+	errors := make([]error, 0)
+
+	markdown := strings.TrimSpace(string(bytes))
+
+	if markdown != "" {
+
+		errors_meta := document.ParseMeta(markdown)
+
+		for _, err := range errors_meta {
+			errors = append(errors, err)
+		}
+
+		errors_body := document.ParseBody(markdown)
+
+		for _, err := range errors_body {
+			errors = append(errors, err)
+		}
+
+	} else {
+		errors = append(errors, fmt.Errorf("Line 1: Expected non-empty markdown code"))
+	}
+
+	return errors
+
+}
+
+func (document *Document) ParseMeta(value string) []error {
+
+	errors := make([]error, 0)
 	lines := strings.Split(strings.TrimSpace(value), "\n")
+	found := map[string]bool{
+		"author":  false,
+		"title":   false,
+		"summary": false,
+		"date":    false,
+		"tags":    false,
+	}
 
 	if lines[0] == "===" {
 
@@ -115,14 +194,17 @@ func (document *Document) ParseMeta(value string) {
 				if key == "author" {
 
 					document.SetAuthor(val)
+					found["author"] = true
 
 				} else if key == "title" {
 
 					document.SetTitle(val)
+					found["title"] = true
 
 				} else if key == "summary" {
 
 					document.SetSummary(val)
+					found["summary"] = true
 
 				} else if key == "date" {
 
@@ -130,12 +212,17 @@ func (document *Document) ParseMeta(value string) {
 
 					if err == nil {
 						document.SetDate(date)
+						found["date"] = true
 					}
 
 				} else if key == "tags" {
 
 					values := strings.Split(val, ",")
-					document.SetTags(values)
+
+					if len(values) > 0 && values[0] != "" {
+						document.SetTags(values)
+						found["tags"] = true
+					}
 
 				} else if key == "image" {
 
@@ -149,12 +236,35 @@ func (document *Document) ParseMeta(value string) {
 
 		}
 
+		if found["author"] == false {
+			errors = append(errors, fmt.Errorf("Line 1: Missing \"author\" (string) frontmatter field"))
+		}
+
+		if found["title"] == false {
+			errors = append(errors, fmt.Errorf("Line 1: Missing \"title\" (string) frontmatter field"))
+		}
+
+		if found["summary"] == false {
+			errors = append(errors, fmt.Errorf("Line 1: Missing \"summary\" (string) frontmatter field"))
+		}
+
+		if found["date"] == false {
+			errors = append(errors, fmt.Errorf("Line 1: Missing \"date\" (YYYY-MM-DD string) frontmatter field"))
+		}
+
+		if found["tags"] == false {
+			errors = append(errors, fmt.Errorf("Line 1: Missing \"tags\" (comma separated strings) frontmatter field"))
+		}
+
 	}
+
+	return errors
 
 }
 
-func (document *Document) ParseBody(value string) {
+func (document *Document) ParseBody(value string) []error {
 
+	errors := make([]error, 0)
 	lines := strings.Split(strings.TrimSpace(value), "\n")
 	regexp_ul, _ := regexp.Compile("^([\\*\\-+]+)[[:space:]]")
 	regexp_ol, _ := regexp.Compile("^([0-9]+)\\.[[:space:]]")
@@ -222,22 +332,109 @@ func (document *Document) ParseBody(value string) {
 			text := line[2:strings.Index(line, "](")]
 			href := line[strings.Index(line, "](")+2 : strings.Index(line, ")")]
 
-			element := NewElement("img")
-			element.SetAttribute("alt", text)
-			element.SetAttribute("src", href)
+			if strings.HasSuffix(href, ".m4a") || strings.HasSuffix(href, ".mp3") || strings.HasSuffix(href, ".opus") {
 
-			if pointer != nil && pointer.IsBlockElement() == true {
-				pointer.AddChild(element)
-			} else {
-				document.AddElement(element)
+				element := NewElement("audio")
+				element.SetLine(l + 1)
+				element.SetAttribute("controls", "")
+				element.SetAttribute("src", href)
+				element.SetAttribute("title", text)
+
+				if pointer != nil && pointer.IsBlockElement() == true {
+					pointer.AddChild(element)
+				} else {
+					document.AddElement(element)
+				}
+
+			} else if strings.HasSuffix(href, ".gif") || strings.HasSuffix(href, ".jpg") || strings.HasSuffix(href, ".png") {
+
+				element := NewElement("img")
+				element.SetLine(l + 1)
+				element.SetAttribute("alt", text)
+				element.SetAttribute("src", href)
+
+				if pointer != nil && pointer.IsBlockElement() == true {
+					pointer.AddChild(element)
+				} else {
+					document.AddElement(element)
+				}
+
 			}
 
-		} else if len(line) > 3 && strings.HasPrefix(line, "```") {
+		} else if strings.HasPrefix(line, "[") && strings.Contains(line, "]: ") {
+
+			text := strings.TrimSpace(line[1:strings.Index(line, "]: ")])
+			children, err := parseInlineElements(line[strings.Index(line, "]: ")+3:], l+1)
+
+			if err == nil {
+
+				if pointer == nil {
+
+					anchor := NewElement("span")
+					anchor.SetLine(l + 1)
+					anchor.SetText("[" + text + "]:")
+					anchor.SetAttribute("id", "footnote-"+text)
+
+					element := NewElement("p")
+					element.SetLine(l + 1)
+					element.AddChild(anchor)
+					element.AddChildren(children)
+
+					document.AddElement(element)
+
+				} else if pointer.Type == "p" {
+
+					anchor := NewElement("span")
+					anchor.SetLine(l + 1)
+					anchor.SetText("[" + text + "]:")
+					anchor.SetAttribute("id", "footnote-"+text)
+
+					pointer.AddChild(anchor)
+					pointer.AddChildren(children)
+
+				} else if pointer != nil && pointer.IsBlockElement() == true {
+
+					anchor := NewElement("span")
+					anchor.SetLine(l + 1)
+					anchor.SetText("[" + text + "]:")
+					anchor.SetAttribute("id", "footnote-"+text)
+
+					pointer.AddChild(anchor)
+					pointer.AddChildren(children)
+
+				} else {
+
+					anchor := NewElement("span")
+					anchor.SetLine(l + 1)
+					anchor.SetText("[" + text + "]:")
+					anchor.SetAttribute("id", "footnote-"+text)
+
+					element := NewElement("p")
+					element.SetLine(l + 1)
+					element.AddChild(anchor)
+					element.AddChildren(children)
+
+					document.AddElement(element)
+
+				}
+
+			} else {
+				errors = append(errors, fmt.Errorf("Line %d: %s", l+1, err.Error()))
+			}
+
+		} else if len(line) >= 3 && strings.HasPrefix(line, "```") {
 
 			if pointer == nil || pointer.Type != "pre" {
 
+				class := strings.TrimSpace(line[3:])
+
+				if class == "" {
+					errors = append(errors, fmt.Errorf("Line %d: Expected non-empty language attribute", l+1))
+				}
+
 				element := NewElement("pre")
-				element.SetAttribute("class", strings.TrimSpace(line[3:]))
+				element.SetLine(l + 1)
+				element.SetAttribute("class", class)
 
 				document.AddElement(element)
 
@@ -248,45 +445,98 @@ func (document *Document) ParseBody(value string) {
 			if pointer == nil || pointer.Type != "table" {
 
 				element := NewElement("table")
+				element.SetLine(l + 1)
 				element.SetText(line)
 
 				document.AddElement(element)
 
 			}
 
+		} else if strings.HasPrefix(line, "#####") {
+
+			children, err := parseInlineElements(strings.TrimSpace(line[5:]), l+1)
+
+			if err == nil {
+
+				element := NewElement("h5")
+				element.SetLine(l + 1)
+				element.SetChildren(children)
+
+				document.AddElement(element)
+
+			} else {
+				errors = append(errors, fmt.Errorf("Line %d: %s", l+1, err.Error()))
+			}
+
 		} else if strings.HasPrefix(line, "####") {
 
-			element := NewElement("h4")
-			element.SetChildren(parseInlineElements(strings.TrimSpace(line[4:])))
+			children, err := parseInlineElements(strings.TrimSpace(line[4:]), l+1)
 
-			document.AddElement(element)
+			if err == nil {
+
+				element := NewElement("h4")
+				element.SetLine(l + 1)
+				element.SetChildren(children)
+
+				document.AddElement(element)
+
+			} else {
+				errors = append(errors, fmt.Errorf("Line %d: %s", l+1, err.Error()))
+			}
 
 		} else if strings.HasPrefix(line, "###") {
 
-			element := NewElement("h3")
-			element.SetChildren(parseInlineElements(strings.TrimSpace(line[3:])))
+			children, err := parseInlineElements(strings.TrimSpace(line[3:]), l+1)
 
-			document.AddElement(element)
+			if err == nil {
+
+				element := NewElement("h3")
+				element.SetLine(l + 1)
+				element.SetChildren(children)
+
+				document.AddElement(element)
+
+			} else {
+				errors = append(errors, fmt.Errorf("Line %d: %s", l+1, err.Error()))
+			}
 
 		} else if strings.HasPrefix(line, "##") {
 
-			element := NewElement("h2")
-			element.SetChildren(parseInlineElements(strings.TrimSpace(line[2:])))
+			children, err := parseInlineElements(strings.TrimSpace(line[2:]), l+1)
 
-			document.AddElement(element)
+			if err == nil {
+
+				element := NewElement("h2")
+				element.SetLine(l + 1)
+				element.SetChildren(children)
+
+				document.AddElement(element)
+
+			} else {
+				errors = append(errors, fmt.Errorf("Line %d: %s", l+1, err.Error()))
+			}
 
 		} else if strings.HasPrefix(line, "#") {
 
-			element := NewElement("h1")
-			element.SetChildren(parseInlineElements(strings.TrimSpace(line[1:])))
+			children, err := parseInlineElements(strings.TrimSpace(line[1:]), l+1)
 
-			document.AddElement(element)
+			if err == nil {
+
+				element := NewElement("h1")
+				element.SetLine(l + 1)
+				element.SetChildren(children)
+
+				document.AddElement(element)
+
+			} else {
+				errors = append(errors, fmt.Errorf("Line %d: %s", l+1, err.Error()))
+			}
 
 		} else if strings.HasPrefix(line, "<") && strings.HasSuffix(line, ">") {
 
 			if strings.HasPrefix(line, "</") && strings.HasSuffix(line, ">") {
 
-				element_type := line[2:len(line)-1]
+				element_type := strings.TrimSpace(line[2 : len(line)-1])
 
 				if element_type != "" {
 
@@ -294,6 +544,8 @@ func (document *Document) ParseBody(value string) {
 						pointer = nil
 					}
 
+				} else {
+					errors = append(errors, fmt.Errorf("Line %d: Malformed raw HTML tag \"%s\"", l+1, line))
 				}
 
 			} else if strings.HasPrefix(line, "<") && strings.HasSuffix(line, "/>") {
@@ -301,14 +553,15 @@ func (document *Document) ParseBody(value string) {
 				element_type := ""
 
 				if strings.Contains(line, " ") {
-					element_type = line[1:strings.Index(line, " ")]
+					element_type = strings.TrimSpace(line[1:strings.Index(line, " ")])
 				} else {
-					element_type = line[1:len(line)-2]
+					element_type = strings.TrimSpace(line[1 : len(line)-2])
 				}
 
 				if element_type != "" {
 
 					element := NewElement(element_type)
+					element.SetLine(l + 1)
 
 					// Don't expect a closing HTML tag
 					element.is_block_element = false
@@ -325,9 +578,9 @@ func (document *Document) ParseBody(value string) {
 								attribute_val := attribute[strings.Index(attribute, "=")+1:]
 
 								if strings.HasPrefix(attribute_val, "\"") && strings.HasSuffix(attribute_val, "\"") {
-									attribute_val = attribute_val[1:len(attribute_val)-1]
+									attribute_val = attribute_val[1 : len(attribute_val)-1]
 								} else if strings.HasPrefix(attribute_val, "'") && strings.HasSuffix(attribute_val, "'") {
-									attribute_val = attribute_val[1:len(attribute_val)-1]
+									attribute_val = attribute_val[1 : len(attribute_val)-1]
 								}
 
 								element.SetAttribute(attribute_key, attribute_val)
@@ -344,6 +597,8 @@ func (document *Document) ParseBody(value string) {
 
 					document.AddElement(element)
 
+				} else {
+					errors = append(errors, fmt.Errorf("Line %d: Malformed raw HTML tag \"%s\"", l+1, line))
 				}
 
 			} else if strings.HasPrefix(line, "<") && strings.HasSuffix(line, ">") {
@@ -353,12 +608,13 @@ func (document *Document) ParseBody(value string) {
 				if strings.Contains(line, " ") {
 					element_type = line[1:strings.Index(line, " ")]
 				} else {
-					element_type = line[1:len(line)-1]
+					element_type = line[1 : len(line)-1]
 				}
 
 				if element_type != "" {
 
 					element := NewElement(element_type)
+					element.SetLine(l + 1)
 
 					// Expect a closing HTML tag
 					element.is_block_element = true
@@ -375,9 +631,9 @@ func (document *Document) ParseBody(value string) {
 								attribute_val := attribute[strings.Index(attribute, "=")+1:]
 
 								if strings.HasPrefix(attribute_val, "\"") && strings.HasSuffix(attribute_val, "\"") {
-									attribute_val = attribute_val[1:len(attribute_val)-1]
+									attribute_val = attribute_val[1 : len(attribute_val)-1]
 								} else if strings.HasPrefix(attribute_val, "'") && strings.HasSuffix(attribute_val, "'") {
-									attribute_val = attribute_val[1:len(attribute_val)-1]
+									attribute_val = attribute_val[1 : len(attribute_val)-1]
 								}
 
 								element.SetAttribute(attribute_key, attribute_val)
@@ -394,126 +650,184 @@ func (document *Document) ParseBody(value string) {
 
 					pointer = document.getLastElement()
 
+				} else {
+					errors = append(errors, fmt.Errorf("Line %d: Malformed raw HTML tag \"%s\"", l+1, line))
 				}
 
 			}
 
 		} else if regexp_ul.MatchString(line) {
 
-			item := NewElement("li")
-			item.SetChildren(parseInlineElements(strings.TrimSpace(line[2:])))
+			children, err := parseInlineElements(strings.TrimSpace(line[2:]), l+1)
 
-			if pointer == nil {
+			if err == nil {
 
-				element := NewElement("ul")
-				document.AddElement(element)
-				pointer = document.getLastElement()
+				item := NewElement("li")
+				item.SetLine(l + 1)
+				item.SetChildren(children)
 
-				pointer.AddChild(item)
-
-			} else if pointer.Type == "ul" {
-
-				pointer.AddChild(item)
-
-			} else if pointer != nil && pointer.IsBlockElement() == true {
-
-				inline_pointer := pointer.getLastChild()
-
-				if inline_pointer == nil || inline_pointer.Type != "ul" {
+				if pointer == nil {
 
 					element := NewElement("ul")
-					pointer.AddChild(element)
-					inline_pointer = pointer.getLastChild()
+					element.SetLine(l + 1)
+
+					document.AddElement(element)
+
+					pointer = document.getLastElement()
+					pointer.AddChild(item)
+
+				} else if pointer.Type == "ul" {
+
+					pointer.AddChild(item)
+
+				} else if pointer != nil && pointer.IsBlockElement() == true {
+
+					inline_pointer := pointer.getLastChild()
+
+					if inline_pointer == nil || inline_pointer.Type != "ul" {
+
+						element := NewElement("ul")
+						element.SetLine(l + 1)
+
+						pointer.AddChild(element)
+
+						inline_pointer = pointer.getLastChild()
+
+					}
+
+					inline_pointer.AddChild(item)
+
+				} else {
+
+					element := NewElement("ul")
+					element.SetLine(l + 1)
+
+					document.AddElement(element)
+
+					pointer = document.getLastElement()
+					pointer.AddChild(item)
 
 				}
 
-				inline_pointer.AddChild(item)
-
 			} else {
-
-				element := NewElement("ul")
-				document.AddElement(element)
-				pointer = document.getLastElement()
-
-				pointer.AddChild(item)
-
+				errors = append(errors, fmt.Errorf("Line %d: %s", l+1, err.Error()))
 			}
 
 		} else if regexp_ol.MatchString(line) {
 
-			item := NewElement("li")
-			item.SetChildren(parseInlineElements(strings.TrimSpace(line[2:])))
+			children, err := parseInlineElements(strings.TrimSpace(line[2:]), l+1)
 
-			if pointer == nil {
+			if err == nil {
 
-				element := NewElement("ol")
-				document.AddElement(element)
-				pointer = document.getLastElement()
+				item := NewElement("li")
+				item.SetLine(l + 1)
+				item.SetChildren(children)
 
-				pointer.AddChild(item)
-
-			} else if pointer.Type == "ol" {
-
-				pointer.AddChild(item)
-
-			} else if pointer != nil && pointer.IsBlockElement() == true {
-
-				inline_pointer := pointer.getLastChild()
-
-				if inline_pointer == nil || inline_pointer.Type != "ol" {
+				if pointer == nil {
 
 					element := NewElement("ol")
-					pointer.AddChild(element)
-					inline_pointer = pointer.getLastChild()
+					element.SetLine(l + 1)
+
+					document.AddElement(element)
+
+					pointer = document.getLastElement()
+					pointer.AddChild(item)
+
+				} else if pointer.Type == "ol" {
+
+					pointer.AddChild(item)
+
+				} else if pointer != nil && pointer.IsBlockElement() == true {
+
+					inline_pointer := pointer.getLastChild()
+
+					if inline_pointer == nil || inline_pointer.Type != "ol" {
+
+						element := NewElement("ol")
+						element.SetLine(l + 1)
+
+						pointer.AddChild(element)
+
+						inline_pointer = pointer.getLastChild()
+
+					}
+
+					inline_pointer.AddChild(item)
+
+				} else {
+
+					element := NewElement("ol")
+					element.SetLine(l + 1)
+
+					document.AddElement(element)
+
+					pointer = document.getLastElement()
+					pointer.AddChild(item)
 
 				}
 
-				inline_pointer.AddChild(item)
-
 			} else {
-
-				element := NewElement("ol")
-				document.AddElement(element)
-				pointer = document.getLastElement()
-
-				pointer.AddChild(item)
-
+				errors = append(errors, fmt.Errorf("Line %d: %s", l+1, err.Error()))
 			}
 
 		} else if line != "" {
 
-			if pointer == nil {
+			children, err := parseInlineElements(strings.TrimSpace(line), l+1)
 
-				element := NewElement("p")
-				element.AddChildren(parseInlineElements(strings.TrimSpace(line)))
+			if err == nil {
 
-				document.AddElement(element)
+				if pointer == nil {
 
-			} else if pointer.Type == "p" {
+					element := NewElement("p")
+					element.SetLine(l + 1)
+					element.AddChildren(children)
 
-				pointer.AddChildren(parseInlineElements(strings.TrimSpace(line)))
+					document.AddElement(element)
 
-			} else if pointer != nil && pointer.IsBlockElement() == true {
+				} else if pointer.Type == "p" {
 
-				pointer.AddChildren(parseInlineElements(strings.TrimSpace(line)))
+					pointer.AddChildren(children)
+
+				} else if pointer != nil && pointer.IsBlockElement() == true {
+
+					pointer.AddChildren(children)
+
+				} else {
+
+					element := NewElement("p")
+					element.SetLine(l + 1)
+					element.AddChildren(children)
+
+					document.AddElement(element)
+
+				}
 
 			} else {
-
-				element := NewElement("p")
-				element.AddChildren(parseInlineElements(strings.TrimSpace(line)))
-
-				document.AddElement(element)
-
+				errors = append(errors, fmt.Errorf("Line %d: %s", l+1, err.Error()))
 			}
 
 		}
 
 	}
 
+	return errors
+
 }
 
-func (document *Document) SetAuthor(value string) {
-	document.Meta.Author = strings.TrimSpace(value)
+func (document *Document) SetAuthor(value string) bool {
+
+	tmp := strings.TrimSpace(value)
+
+	if tmp != "" {
+
+		document.Meta.Author = tmp
+
+		return true
+
+	}
+
+	return false
+
 }
 
 func (document *Document) SetDate(value time.Time) bool {
@@ -616,6 +930,10 @@ func (document *Document) Render(indent string) string {
 
 			result = append(result, element.RenderInto(document, indent+"\t"))
 
+		} else if element.Type == "h4" {
+			result = append(result, element.RenderInto(document, indent+"\t"))
+		} else if element.Type == "h5" {
+			result = append(result, element.RenderInto(document, indent+"\t"))
 		} else if element.Type != "#text" {
 			result = append(result, element.RenderInto(document, indent+"\t"))
 		}
@@ -625,5 +943,120 @@ func (document *Document) Render(indent string) string {
 	result = append(result, indent+"</section>")
 
 	return strings.Join(result, "\n")
+
+}
+
+func (document *Document) String() string {
+
+	lines := make([]string, 0)
+
+	lines = append(lines, "===")
+
+	if document.Meta.Title != "" {
+		lines = append(lines, fmt.Sprintf("- title: %s", document.Meta.Title))
+	}
+
+	if document.Meta.Summary != "" {
+		lines = append(lines, fmt.Sprintf("- summary: %s", document.Meta.Summary))
+	}
+
+	if document.Meta.Date.IsZero() == false {
+		lines = append(lines, fmt.Sprintf("- date: %s", document.Meta.Date.Format("2006-01-02")))
+	}
+
+	if len(document.Meta.Tags) > 0 {
+
+		tags := make([]string, 0)
+
+		for _, tag := range document.Meta.Tags {
+			tags = append(tags, tag)
+		}
+
+		sort.Strings(tags)
+
+		lines = append(lines, fmt.Sprintf("- tags: %s", strings.Join(tags, ", ")))
+
+	}
+
+	if document.Meta.Image != "" {
+		lines = append(lines, fmt.Sprintf("- image: %s", document.Meta.Image))
+	}
+
+	lines = append(lines, "===")
+	lines = append(lines, "")
+
+	for _, element := range document.Body {
+
+		switch element.Type {
+
+		case "h1", "h2", "h3", "h4", "h5":
+
+			lines = append(lines, fmt.Sprintf("%s", element.String()))
+			lines = append(lines, "")
+
+		case "audio", "img":
+
+			lines = append(lines, fmt.Sprintf("%s", element.String()))
+			lines = append(lines, "")
+
+		case "p":
+
+			lines = append(lines, fmt.Sprintf("%s", element.String()))
+			lines = append(lines, "")
+
+		case "pre":
+
+			lines = append(lines, fmt.Sprintf("%s", element.String()))
+			lines = append(lines, "")
+
+		case "article", "aside", "dialog", "div", "figure", "figcaption", "footer", "header", "main":
+
+			lines = append(lines, fmt.Sprintf("%s", element.String()))
+			lines = append(lines, "")
+
+		case "span":
+
+			lines = append(lines, fmt.Sprintf("%s", element.String()))
+			lines = append(lines, "")
+
+		case "ol", "ul":
+
+			lines = append(lines, fmt.Sprintf("%s", element.String()))
+			// XXX: Unsure if this is needed or not
+			// lines = append(lines, "")
+
+		case "table":
+
+			lines = append(lines, fmt.Sprintf("%s", strings.TrimSpace(element.String())))
+			lines = append(lines, "")
+
+		}
+
+	}
+
+	return strings.Join(lines, "\n")
+
+}
+
+func (document *Document) UnmarshalMarkdown(bytes []byte) error {
+
+	// Set default image
+	document.SetImage("/design/about/cookiengineer.jpg")
+
+	errors := document.Parse(bytes)
+
+	if len(errors) > 0 {
+
+		messages := make([]string, 0, len(errors))
+
+		for _, err := range errors {
+			messages = append(messages, err.Error())
+		}
+
+		return fmt.Errorf("Parsing Error\n%s\n", strings.Join(messages, "\n"))
+
+	} else {
+		return nil
+	}
 
 }

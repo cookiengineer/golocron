@@ -1,10 +1,14 @@
 package markdown
 
+import "fmt"
 import "html"
 import "sort"
 import "strings"
 
+var markdown_line_width = 90
+
 type Element struct {
+	Line             int               `json:"line"`
 	Type             string            `json:"type"`
 	Text             string            `json:"text"`
 	Attributes       map[string]string `json:"attributes"`
@@ -16,6 +20,7 @@ func NewElement(typ string) *Element {
 
 	var element Element
 
+	element.Line = int(0)
 	element.Type = strings.TrimSpace(typ)
 	element.Attributes = make(map[string]string)
 	element.Children = make([]*Element, 0)
@@ -145,482 +150,235 @@ func (element *Element) RenderInto(document *Document, indent string) string {
 
 	result := ""
 
-	if element.Type == "b" || element.Type == "em" || element.Type == "del" {
+	switch element.Type {
 
-		result += indent + "<" + element.Type + ">" + element.Text + "</" + element.Type + ">"
+	case "a":
 
-	} else if element.Type == "code" {
+		attributes   := ""
+		is_same_site := false
 
-		result += indent + "<" + element.Type + ">" + html.EscapeString(element.Text) + "</" + element.Type + ">"
+		for _, name := range element.getAttributes() {
 
-	} else if element.Type == "a" {
+			value := element.GetAttribute(name)
 
-		result += indent + "<" + element.Type
+			if name == "href" {
 
-		if len(element.Attributes) > 0 {
+				if strings.HasPrefix(value, "#") {
 
-			attribute_names := element.getAttributes()
-			is_same_site := false
+					attributes += fmt.Sprintf(" %s=\"%s\"", "href", strings.TrimSpace(value))
+					is_same_site = true
 
-			for _, name := range attribute_names {
+				} else {
 
-				value := element.GetAttribute(name)
-
-				if name == "href" {
 					value = resolveURL(document.URL, value)
-					is_same_site = strings.HasPrefix(value, "https://cookie.engineer/")
-				} else if name == "ping" {
-					value = resolveURL(document.URL, value)
+
+					if strings.HasPrefix(value, "https://cookie.engineer/") {
+						is_same_site = true
+					} else if strings.HasPrefix(value, "/") {
+						is_same_site = true
+					}
+
+					attributes += fmt.Sprintf(" %s=\"%s\"", "href", value)
+
 				}
 
-				if value != "" {
-					result += " " + name + "=\"" + value + "\""
-				} else {
-					result += " " + name
-				}
+			} else if name == "ping" {
 
-			}
+				attributes += fmt.Sprintf(" %s=\"%s\"", "ping", resolveURL(document.URL, value))
 
-			if is_same_site == false && element.HasAttribute("target") == false {
-				result += " target=\"_blank\""
-			}
-
-		}
-
-		result += ">"
-		result += element.Text
-		result += "</" + element.Type + ">"
-
-	} else if element.Type == "abbr" {
-
-		result += indent + "<" + element.Type
-
-		if len(element.Attributes) > 0 {
-
-			attribute_names := element.getAttributes()
-
-			for _, name := range attribute_names {
-
-				value := element.GetAttribute(name)
+			} else {
 
 				if value != "" {
-					result += " " + name + "=\"" + value + "\""
+					attributes += " " + name + "=\"" + value + "\""
 				} else {
-					result += " " + name
+					attributes += " " + name
 				}
 
 			}
 
 		}
 
-		result += ">"
-		result += element.Text
-		result += "</" + element.Type + ">"
-
-	} else if element.Type == "img" || element.Type == "audio" || element.Type == "video" {
-
-		result += indent + "<" + element.Type
-
-		if len(element.Attributes) > 0 {
-
-			attribute_names := element.getAttributes()
-
-			for _, name := range attribute_names {
-
-				value := element.GetAttribute(name)
-
-				if name == "src" {
-					value = resolveURL(document.URL, value)
-				}
-
-				if value != "" {
-					result += " " + name + "=\"" + value + "\""
-				} else {
-					result += " " + name
-				}
-
-			}
-
+		if is_same_site == false && element.HasAttribute("target") == false {
+			attributes += " target=\"_blank\""
 		}
 
-		result += "/>"
+		attributes = strings.TrimSpace(attributes)
 
-	} else if element.Type == "h1" || element.Type == "h2" || element.Type == "h3" || element.Type == "h4" {
+		if attributes != "" {
+			result = fmt.Sprintf("%s<a %s>%s</a>", indent, attributes, element.Text)
+		} else {
+			result = fmt.Sprintf("%s<a>%s</a>", indent, element.Text)
+		}
+
+	case "audio":
+
+		attributes := element.renderAttributes(document)
+
+		if attributes != "" {
+			result = fmt.Sprintf("%s<audio %s></audio>", indent, attributes)
+		} else {
+			result = fmt.Sprintf("%s<audio></audio>", indent)
+		}
+
+	case "code":
+
+		result = fmt.Sprintf("%s<code>%s</code>", indent, html.EscapeString(element.Text))
+	
+	// headlines
+	case "h1", "h2", "h3", "h4", "h5":
 
 		id := element.GetAttribute("id")
+		content := element.renderChildren(document, "", " ")
 
 		if id == "" {
 			id = generateId(element)
 		}
 
-		result += indent + "<" + element.Type + " id=\"" + id + "\">"
+		result = fmt.Sprintf("%s<%s id=\"%s\">%s</%s>", indent, element.Type, id, content, element.Type)
 
-		for c, child := range element.Children {
+	case "img":
 
-			result += child.RenderInto(document, "")
+		attributes := element.renderAttributes(document)
 
-			if c < len(element.Children) - 1 {
-				result += " "
-			}
-
+		if attributes != "" {
+			result = fmt.Sprintf("%s<img %s/>", indent, attributes)
+		} else {
+			result = fmt.Sprintf("%s<img/>", indent)
 		}
 
-		result += "</" + element.Type + ">"
+	case "pre":
 
-	} else if element.Type == "div" || element.Type == "figure" || element.Type == "figcaption" || element.Type == "p" {
+		class := element.GetAttribute("class")
+
+		if class != "" {
+			result = fmt.Sprintf("%s<pre class=\"%s\">\n%s\n%s</pre>", indent, class, html.EscapeString(element.Text), indent)
+		} else {
+			result = fmt.Sprintf("%s<pre>\n%s\n%s</pre>", indent, html.EscapeString(element.Text), indent)
+		}
+
+	// inline elements
+	case "abbr", "b", "del", "em", "span":
+
+		attributes := element.renderAttributes(document)
+
+		if attributes != "" {
+			result = fmt.Sprintf("%s<%s %s>%s</%s>", indent, element.Type, attributes, element.Text, element.Type)
+		} else {
+			result = fmt.Sprintf("%s<%s>%s</%s>", indent, element.Type, element.Text, element.Type)
+		}
+
+	// block flow-root elements
+	case "article", "aside", "dialog", "footer", "header", "main":
+
+		attributes := element.renderAttributes(document)
+		content := element.renderChildren(document, indent+"\t", "\n")
+
+		if len(attributes) > 0 {
+			result = fmt.Sprintf("%s<%s %s>\n%s\n%s</%s>", indent, element.Type, attributes, content, indent, element.Type)
+		} else {
+			result = fmt.Sprintf("%s<%s>\n%s\n%s</%s>", indent, element.Type, content, indent, element.Type)
+		}
+
+	// inline-block elements
+	case "div", "figure", "figcaption", "p":
 
 		if len(element.Children) > 1 {
 
-			result += indent + "<" + element.Type
+			attributes := element.renderAttributes(document)
+			content := element.renderChildren(document, indent+"\t", "\n")
 
-			attribute_names := element.getAttributes()
-
-			for _, name := range attribute_names {
-
-				value := element.GetAttribute(name)
-
-				if value != "" {
-					result += " " + name + "=\"" + value + "\""
-				} else {
-					result += " " + name
-				}
-
+			if attributes != "" {
+				result = fmt.Sprintf("%s<%s %s>\n%s\n%s</%s>", indent, element.Type, attributes, content, indent, element.Type)
+			} else {
+				result = fmt.Sprintf("%s<%s>\n%s\n%s</%s>", indent, element.Type, content, indent, element.Type)
 			}
-
-			result += ">\n"
-
-			for _, child := range element.Children {
-				result += child.RenderInto(document, indent+"\t") + "\n"
-			}
-
-			result += indent + "</" + element.Type + ">"
 
 		} else if len(element.Children) == 1 {
 
-			result += indent + "<" + element.Type
+			attributes := element.renderAttributes(document)
+			content := element.renderChildren(document, "", "")
 
-			attribute_names := element.getAttributes()
-
-			for _, name := range attribute_names {
-
-				value := element.GetAttribute(name)
-
-				if value != "" {
-					result += " " + name + "=\"" + value + "\""
-				} else {
-					result += " " + name
-				}
-
-			}
-
-			result += ">" + element.Children[0].RenderInto(document, "") + "</" + element.Type + ">"
-
-		}
-
-	} else if element.Type == "article" || element.Type == "dialog" || element.Type == "footer" || element.Type == "header" || element.Type == "main" {
-
-		result += indent + "<" + element.Type
-
-		attribute_names := element.getAttributes()
-
-		for _, name := range attribute_names {
-
-			value := element.GetAttribute(name)
-
-			if value != "" {
-				result += " " + name + "=\"" + value + "\""
+			if attributes != "" {
+				result = fmt.Sprintf("%s<%s %s>%s</%s>", indent, element.Type, attributes, content, element.Type)
 			} else {
-				result += " " + name
+				result = fmt.Sprintf("%s<%s>%s</%s>", indent, element.Type, content, element.Type)
 			}
 
 		}
 
-		result += ">\n"
+	// list elements
+	case "ol", "ul":
 
+		content := element.renderChildren(document, indent + "\t", "\n")
+		result = fmt.Sprintf("%s<%s>%s</%s>", indent, element.Type, content, element.Type)
 
-		for _, child := range element.Children {
-			result += child.RenderInto(document, indent+"\t") + "\n"
+	// list items
+	case "li":
+
+		content := element.renderChildren(document, "", " ")
+		result = fmt.Sprintf("%s<li>%s</li>", indent, content)
+
+	case "#text":
+
+		result = fmt.Sprintf("%s%s", indent, element.Text)
+
+	case "table":
+
+		result = renderTable(element, document, indent)
+
+	default:
+
+		// Do Nothing, unallowed HTML element
+
+	}
+
+	return result
+
+}
+
+func (element *Element) renderAttributes(document *Document) string {
+
+	result := ""
+
+	for _, name := range element.getAttributes() {
+
+		value := element.GetAttribute(name)
+
+		if document != nil {
+
+			if name == "href" {
+				value = resolveURL(document.URL, value)
+			} else if name == "ping" {
+				value = resolveURL(document.URL, value)
+			} else if name == "src" {
+				value = resolveURL(document.URL, value)
+			}
+
 		}
 
-		result += indent + "</" + element.Type + ">"
-
-	} else if element.Type == "pre" {
-
-		class, ok := element.Attributes["class"]
-
-		text := html.EscapeString(element.Text)
-
-		if ok == true {
-			result += indent + "<pre class=\"" + class + "\">\n"
-			result += text + "\n"
-			result += indent + "</pre>"
+		if value != "" {
+			result += " " + name + "=\"" + value + "\""
 		} else {
-			result += indent + "<pre>\n"
-			result += text + "\n"
-			result += indent + "</pre>"
+			result += " " + name
 		}
 
-	} else if element.Type == "table" {
+	}
 
-		alignment := make([]string, 0)
-		thead := make([]string, 0)
-		tbody := make([][]string, 0)
-		tfoot := make([][]string, 0)
+	return strings.TrimSpace(result)
 
-		lines := strings.Split(strings.TrimSpace(element.Text), "\n")
+}
 
-		if len(lines) >= 2 {
+func (element *Element) renderChildren(document *Document, indent string, space string) string {
 
-			first_line := strings.Split(lines[0][1:len(lines[0])-1], "|")
+	result := ""
 
-			for f := 0; f < len(first_line); f++ {
-				thead = append(thead, strings.TrimSpace(first_line[f]))
-			}
+	for c := 0; c < len(element.Children); c++ {
 
-			if strings.Contains(lines[1], "---") {
+		result += element.Children[c].RenderInto(document, indent)
 
-				second_line := strings.Split(lines[1][1:len(lines[1])-1], "|")
-
-				for s := 0; s < len(second_line); s++ {
-
-					cell := second_line[s]
-
-					if strings.HasPrefix(cell, ":-") && strings.HasSuffix(cell, "-:") {
-						alignment = append(alignment, "justify")
-					} else if strings.HasPrefix(cell, ":-") {
-						alignment = append(alignment, "left")
-					} else if strings.HasSuffix(cell, "-:") {
-						alignment = append(alignment, "right")
-					} else {
-						alignment = append(alignment, "center")
-					}
-
-				}
-
-				if len(lines) > 2 {
-
-					fill := "tbody"
-
-					for l := 2; l < len(lines); l++ {
-
-						if strings.Contains(lines[l], "---") {
-							fill = "tfoot"
-						} else {
-
-							cells := strings.Split(lines[l][1:len(lines[l])-1], "|")
-							row := make([]string, 0)
-
-							for c := 0; c < len(cells); c++ {
-								row = append(row, strings.TrimSpace(cells[c]))
-							}
-
-							if fill == "tbody" {
-								tbody = append(tbody, row)
-							} else if fill == "tfoot" {
-								tfoot = append(tfoot, row)
-							}
-
-						}
-
-					}
-
-				}
-
-			} else {
-
-				for t := 0; t < len(thead); t++ {
-					alignment = append(alignment, "center")
-				}
-
-				if len(lines) > 1 {
-
-					fill := "tbody"
-
-					for l := 1; l < len(lines); l++ {
-
-						if strings.Contains(lines[l], "---") {
-							fill = "tfoot"
-						} else {
-
-							cells := strings.Split(lines[l][1:len(lines[l])-1], "|")
-							row := make([]string, 0)
-
-							for c := 0; c < len(cells); c++ {
-								row = append(row, strings.TrimSpace(cells[c]))
-							}
-
-							if fill == "tbody" {
-								tbody = append(tbody, row)
-							} else if fill == "tfoot" {
-								tfoot = append(tbody, row)
-							}
-
-						}
-
-					}
-
-				}
-
-			}
-
+		if c < len(element.Children) - 1 {
+			result += space
 		}
-
-		if len(thead) > 0 || len(tbody) > 0 || len(tfoot) > 0 {
-
-			result += indent + "<" + element.Type + ">\n"
-
-			if len(thead) > 0 {
-
-				result += indent + "\t<thead>\n"
-				result += indent + "\t\t<tr>\n"
-
-				for t := 0; t < len(thead); t++ {
-
-					elements := parseInlineElements(strings.TrimSpace(thead[t]))
-					align := alignment[t]
-
-					if align == "center" {
-						result += indent + "\t\t\t<th align=\"center\">"
-					} else if align == "left" {
-						result += indent + "\t\t\t<th align=\"left\">"
-					} else if align == "right" {
-						result += indent + "\t\t\t<th align=\"right\">"
-					} else if align == "justify" {
-						result += indent + "\t\t\t<th align=\"justify\">"
-					}
-
-					for e := 0; e < len(elements); e++ {
-						result += elements[e].RenderInto(document, "")
-					}
-
-					result += "</th>\n"
-
-				}
-
-				result += indent + "\t\t</tr>\n"
-				result += indent + "\t</thead>\n"
-
-			}
-
-			if len(tbody) > 0 {
-
-				result += indent + "\t<tbody>\n"
-
-				for t := 0; t < len(tbody); t++ {
-
-					result += indent + "\t\t<tr>\n"
-
-					cells := tbody[t]
-
-					for c := 0; c < len(cells); c++ {
-
-						elements := parseInlineElements(strings.TrimSpace(cells[c]))
-						align := alignment[c]
-
-						if align == "center" {
-							result += indent + "\t\t\t<td align=\"center\">"
-						} else if align == "left" {
-							result += indent + "\t\t\t<td align=\"left\">"
-						} else if align == "right" {
-							result += indent + "\t\t\t<td align=\"right\">"
-						} else if align == "justify" {
-							result += indent + "\t\t\t<td align=\"justify\">"
-						}
-
-						for e := 0; e < len(elements); e++ {
-							result += elements[e].RenderInto(document, "")
-						}
-
-						result += "</td>\n"
-
-					}
-
-					result += indent + "\t\t</tr>\n"
-
-				}
-
-				result += indent + "\t</tbody>\n"
-
-			}
-
-			if len(tfoot) > 0 {
-
-				result += indent + "\t<tfoot>\n"
-
-				for t := 0; t < len(tfoot); t++ {
-
-					cells := tfoot[t]
-
-					result += indent + "\t\t<tr>\n"
-
-					for c := 0; c < len(cells); c++ {
-
-						elements := parseInlineElements(strings.TrimSpace(cells[c]))
-						align := alignment[c]
-
-						if align == "center" {
-							result += indent + "\t\t\t<td align=\"center\">"
-						} else if align == "left" {
-							result += indent + "\t\t\t<td align=\"left\">"
-						} else if align == "right" {
-							result += indent + "\t\t\t<td align=\"right\">"
-						} else if align == "justify" {
-							result += indent + "\t\t\t<td align=\"justify\">"
-						}
-
-						for e := 0; e < len(elements); e++ {
-							result += elements[e].RenderInto(document, "")
-						}
-
-						result += "</td>\n"
-
-					}
-
-					result += indent + "\t\t</tr>\n"
-
-				}
-
-				result += indent + "\t</tfoot>\n"
-
-			}
-
-			result += indent + "</" + element.Type + ">"
-
-		}
-
-	} else if element.Type == "ol" || element.Type == "ul" {
-
-		result += indent + "<" + element.Type + ">\n"
-
-		for c := 0; c < len(element.Children); c++ {
-			result += element.Children[c].RenderInto(document, indent+"\t") + "\n"
-		}
-
-		result += indent + "</" + element.Type + ">"
-
-	} else if element.Type == "li" {
-
-		result += indent + "<" + element.Type + ">"
-
-		for c, child := range element.Children {
-
-			result += child.RenderInto(document, "")
-
-			if c < len(element.Children) - 1 {
-				result += " "
-			}
-
-		}
-
-		result += "</" + element.Type + ">"
-
-	} else if element.Type == "#text" {
-
-		result += indent + element.Text
-
-	} else if element.Type != "" {
-
-		// TODO: Should we allow unsupported HTML tags? Potential XSS?
 
 	}
 
@@ -708,6 +466,10 @@ func (element *Element) SetClass(value string) {
 	element.Attributes["class"] = strings.TrimSpace(value)
 }
 
+func (element *Element) SetLine(value int) {
+	element.Line = value
+}
+
 func (element *Element) SetText(value string) {
 
 	element.Text = strings.TrimSpace(value)
@@ -718,3 +480,208 @@ func (element *Element) SetText(value string) {
 
 }
 
+func (element *Element) stringChildren(space string) string {
+
+	result := ""
+
+	for c := 0; c < len(element.Children); c++ {
+
+		result += element.Children[c].String()
+
+		if c < len(element.Children) - 1 {
+			result += space
+		}
+
+	}
+
+	return result
+
+}
+
+func (element *Element) String() string {
+
+	result := ""
+
+	switch element.Type {
+
+	case "a":
+
+		if strings.HasPrefix(element.Text, "#") {
+			result = fmt.Sprintf("[%s](%s)", element.Text, element.Text)
+		} else {
+			result = fmt.Sprintf("[%s](%s)", element.Text, element.GetAttribute("href"))
+		}
+
+	case "abbr":
+
+		result = fmt.Sprintf("[%s]{%s}", element.Text, element.GetAttribute("title"))
+
+	case "audio":
+
+		result = fmt.Sprintf("![%s](%s)", element.GetAttribute("title"), element.GetAttribute("src"))
+
+	case "b":
+
+		result = fmt.Sprintf("**%s**", element.Text)
+
+	case "code":
+
+		result = fmt.Sprintf("`%s`", element.Text)
+
+	case "del":
+
+		result = fmt.Sprintf("~%s~", element.Text)
+
+	case "em":
+
+		result = fmt.Sprintf("*%s*", element.Text)
+
+	case "h1":
+
+		result = fmt.Sprintf("# %s", element.stringChildren(" "))
+
+	case "h2":
+
+		result = fmt.Sprintf("## %s", element.stringChildren(" "))
+
+	case "h3":
+
+		result = fmt.Sprintf("### %s", element.stringChildren(" "))
+
+	case "h4":
+
+		result = fmt.Sprintf("#### %s", element.stringChildren(" "))
+
+	case "h5":
+
+		result = fmt.Sprintf("##### %s", element.stringChildren(" "))
+
+	case "img":
+
+		result = fmt.Sprintf("![%s](%s)", element.GetAttribute("alt"), element.GetAttribute("src"))
+
+	case "p":
+
+		content := make([]string, 0)
+		current := ""
+
+		for c := 0; c < len(element.Children); c++ {
+
+			if element.Children[c].Type == "#text" {
+
+				words := strings.Split(element.Children[c].String(), " ")
+
+				for w, word := range words {
+
+					current += word
+
+					if len(current) > markdown_line_width {
+
+						content = append(content, current)
+						current = ""
+
+					} else {
+
+						if w < len(words) - 1 {
+							current += " "
+						}
+
+					}
+
+				}
+
+				if current != "" && c < len(element.Children) - 1 {
+					current += " "
+				}
+
+			} else {
+
+				current += element.Children[c].String()
+
+				if len(current) > markdown_line_width {
+
+					content = append(content, current)
+					current = ""
+
+				} else {
+
+					if current != "" && c < len(element.Children) - 1 {
+						current += " "
+					}
+
+				}
+
+			}
+
+		}
+
+		if current != "" {
+			content = append(content, current)
+			current = ""
+		}
+
+		result = fmt.Sprintf("%s", strings.Join(content, "\n"))
+
+	case "pre":
+
+		class, ok := element.Attributes["class"]
+
+		if ok == true {
+			result = fmt.Sprintf("```%s\n%s\n```", class, element.Text)
+		} else {
+			result = fmt.Sprintf("```\n%s\n```", element.Text)
+		}
+
+	// Raw HTML nodes
+	case "article", "aside", "dialog", "div", "figure", "figcaption", "footer", "header", "main", "span":
+
+		content := element.stringChildren("\n")
+		attributes := element.renderAttributes(nil)
+
+		if attributes != "" {
+			result = fmt.Sprintf("<%s %s>\n%s\n</%s>", element.Type, attributes, content, element.Type)
+		} else {
+			result = fmt.Sprintf("<%s>\n%s\n</%s>", element.Type, content, element.Type)
+		}
+
+	case "ol":
+
+		content := ""
+
+		for c := 0; c < len(element.Children); c++ {
+			content += fmt.Sprintf("%d. %s\n", c, element.Children[c].String())
+		}
+
+		result = fmt.Sprintf("%s", content)
+
+	case "ul":
+
+		content := ""
+
+		for c := 0; c < len(element.Children); c++ {
+			content += fmt.Sprintf("- %s\n", element.Children[c].String())
+		}
+
+		result = fmt.Sprintf("%s", content)
+
+	case "li":
+
+		result = fmt.Sprintf("%s", element.stringChildren(" "))
+
+	case "#text":
+
+		result = fmt.Sprintf("%s", element.Text)
+
+	case "table":
+
+		result = stringTable(element)
+
+	default:
+
+		// Do Nothing, unallowed HTML element
+
+	}
+
+	return result
+
+}
